@@ -1,11 +1,11 @@
 export const eth2migrationParams = {
   mainnet: {
-    signerDnpName: "web3signer",
+    signerDnpName: "web3signer.dnp.dappnode.eth",
     clientDnpName: "prysm.dnp.dappnode.eth",
     validatorContainerName: "DAppNodePackage-validator.prysm.dnp.dappnode.eth"
   },
   testnet: {
-    signerDnpName: "web3signer-prater",
+    signerDnpName: "web3signer-prater.dnp.dappnode.eth",
     clientDnpName: "prater.dnp.dappnode.eth",
     validatorContainerName:
       "DAppNodePackage-validator.prysm-prater.dnp.dappnode.eth"
@@ -31,3 +31,9 @@ export const eth2migrationParams = {
 };
 
 export type Eth2Network = "prater" | "mainnet";
+
+export interface ValidatorFiles {
+  validatorKeystore: string;
+  walletPassword: string;
+  slashingProtection: string;
+}

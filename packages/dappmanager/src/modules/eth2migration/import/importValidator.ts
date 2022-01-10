@@ -1,5 +1,7 @@
 import Dockerode from "dockerode";
 import { extendError } from "../../../utils/extendError";
+import fetch from "node-fetch";
+import { ValidatorFiles } from "../params";
 
 /**
  * Import validator into web3signer by calling API endpoint: /eth/v1/keystores
@@ -9,28 +11,20 @@ import { extendError } from "../../../utils/extendError";
  *  - walletpassword.txt
  *  - slashing_protection.json
  */
-export async function importValidatorKeystores({
+export async function importValidatorFiles({
   signerDnpName,
-  volume
+  validatorFiles
 }: {
   signerDnpName: string;
-  volume: Dockerode.Volume;
+  validatorFiles: ValidatorFiles;
 }): Promise<void> {
   try {
+    const res = await fetch(signerDnpName, {
+      method: "post",
+      body: validatorFiles,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (e) {
-    throw extendError(e, "Eth2 migration: importValidatorKeystores failed");
-  }
-}
-
-/**
- * Returns the validator files needed for the import:
- * - validator_keystore_x.json
- * - walletpassword.txt
- * - slashing_protection.json
- */
-function getValidatorFiles({ volume }: { volume: Dockerode.Volume }) {
-  try {
-  } catch (e) {
-    throw e;
+    throw extendError(e, "Eth2 migration: importValidatorFiles failed");
   }
 }
