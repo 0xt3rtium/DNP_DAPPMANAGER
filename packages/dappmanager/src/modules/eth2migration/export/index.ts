@@ -15,15 +15,17 @@ import { extendError } from "../../../utils/extendError";
 export async function exportValidator({
   network,
   containerName,
-  volume
+  volume,
+  signerDnpName
 }: {
   network: Eth2Network;
   containerName: string;
   volume: Dockerode.Volume;
+  signerDnpName: string;
 }): Promise<void> {
   try {
     // Check export requirements
-    await checkExportRequirements({ containerName, volume });
+    await checkExportRequirements({ containerName, volume, signerDnpName });
 
     // Export keys
     await exportValidatorKeys({ network, containerName });

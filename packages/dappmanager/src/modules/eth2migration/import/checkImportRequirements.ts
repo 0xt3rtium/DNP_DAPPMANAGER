@@ -1,9 +1,8 @@
-import { packageGet, packageInstall } from "../../../calls";
-import { logs } from "../../../logs";
+import { packageGet, packageStartStop } from "../../../calls";
 import { extendError } from "../../../utils/extendError";
 
 /**
- * Check web3signer package is installed, if not install it WITHOUT starting it
+ * Check web3signer import requiremments
  */
 export async function checkImportRequirements({
   signerDnpName
@@ -11,23 +10,25 @@ export async function checkImportRequirements({
   signerDnpName: string;
 }): Promise<void> {
   try {
-    // Check web3signer package is installed, if not install it WITHOUT starting it
-    await packageGet({
+    // Check web3signer package is installed
+    const web3SignerPackage = await packageGet({
       dnpName: signerDnpName
     }).catch(async e => {
-      // Consider typing error for dnp not found
-      if (e.message.includes("No DNP was found for name")) {
-        logs.info(
-          "Eth2 migration: web3signer package not installed, installing it"
-        );
-        await packageInstall({
-          name: signerDnpName
-        }).catch(e => {
-          throw extendError(e, "web3signer installation failled");
-        });
-      } else throw e;
+      throw extendError(e, "web3signer package not installed");
     });
+
+    // Check all containers from web3signer package are running
+    web3SignerPackage.containers.forEach(async container => {
+      if (container.state !== "running")
+        await packageStartStop({ dnpName: signerDnpName });
+    });
+
+    // TODO Validate validator files
   } catch (e) {
     throw extendError(e, "Eth2 migration: checkExportRequirements failled");
   }
+}
+
+function validateValidatorFiles() {
+  // TODO
 }

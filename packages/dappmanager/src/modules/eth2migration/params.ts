@@ -31,9 +31,3 @@ export const eth2migrationParams = {
 };
 
 export type Eth2Network = "prater" | "mainnet";
-
-export interface ValidatorFiles {
-  validatorKeystore: string;
-  walletPassword: string;
-  slashingProtection: string;
-}
