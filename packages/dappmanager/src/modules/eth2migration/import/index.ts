@@ -5,12 +5,11 @@ import { verifyImport } from "./verifyImport";
 
 /** Import validator public keys into eth2-client web3signer */
 export async function importValidator({
-  containerName,
+  validatorContainerName,
   signerDnpName,
-
   volume
 }: {
-  containerName: string;
+  validatorContainerName: string;
   signerDnpName: string;
   volume: string;
 }): Promise<void> {
@@ -19,7 +18,7 @@ export async function importValidator({
     await checkImportRequirements({ signerDnpName });
 
     // Import validator: validator_keystore_x.json and walletpassword.txt and slashing_protection.json
-    await importValidatorFiles({ containerName, volume });
+    await importValidatorFiles({ validatorContainerName, volume });
 
     // Verify import
     await verifyImport();

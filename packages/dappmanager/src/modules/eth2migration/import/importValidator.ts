@@ -13,10 +13,10 @@ import { logs } from "../../../logs";
  *  - slashing_protection.json
  */
 export async function importValidatorFiles({
-  containerName,
+  validatorContainerName,
   volume
 }: {
-  containerName: string;
+  validatorContainerName: string;
   volume: string;
 }): Promise<void> {
   try {
@@ -32,7 +32,7 @@ export async function importValidatorFiles({
 -F '"keystores": [@${eth2migrationParams.backup.backupDir}/${keystoreFile}]'}]' 
 -F '"passwords": [@${eth2migrationParams.backup.backupWalletPasswordFile}}]' 
 -F '"slashing_protection": @${eth2migrationParams.backup.backupSlashingProtectionFile}}'
- http://${containerName}/eth/v1/keystores"`;
+ http://${validatorContainerName}/eth/v1/keystores"`;
 
       // Set up an intermedium container to call the API endpoint
       const output = await shell(

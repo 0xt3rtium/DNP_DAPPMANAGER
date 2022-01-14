@@ -7,14 +7,14 @@ import { logs } from "../../../logs";
 
 /**
  * Check export requirements: paths and walletpassword.txt
- * @param containerName
+ * @param validatorContainerName
  */
 export async function checkExportRequirements({
-  containerName,
+  validatorContainerName,
   volume,
   signerDnpName
 }: {
-  containerName: string;
+  validatorContainerName: string;
   volume: Dockerode.Volume;
   signerDnpName: string;
 }): Promise<void> {
@@ -24,7 +24,7 @@ export async function checkExportRequirements({
 
     // Validator container has walletdir and walletpassword file
     await shell(
-      `docker exec ${containerName} ls ${eth2migrationParams.keys.walletPasswordFile}`
+      `docker exec ${validatorContainerName} ls ${eth2migrationParams.keys.walletPasswordFile}`
     ).catch(e => {
       throw extendError(e, "walletdir or/and walletpassword file not found");
     });

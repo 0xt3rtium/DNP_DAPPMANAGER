@@ -2,7 +2,7 @@ import { PackageContainer } from "../../types";
 import { packageGet } from "../../calls";
 import { docker } from "../docker/api/docker";
 import Dockerode from "dockerode";
-import { Eth2Network, eth2migrationParams } from "./params";
+import { Eth2Network, eth2migrationParams, Eth2Client } from "./params";
 
 /**
  * Returns the validator container specs
@@ -13,32 +13,14 @@ export async function getValidatorContainerSpecs(
   dnpName: string,
   containerName: string
 ): Promise<{ container: PackageContainer; volume: Dockerode.Volume }> {
-  const container = await getPrysmValidatorContainer(dnpName, containerName);
-  const volume = await getPrysmValidatorVolumes(container);
+  const container = await getEth2ClientValidatorContainer(
+    dnpName,
+    containerName
+  );
+  const volume = await getEth2ClientValidatorVolumes(container);
   return {
     container,
     volume
-  };
-}
-
-/**
- * Returns the container params deppending on
- * network: testnet | mainnet
- * @param testnet
- */
-export function getMigrationParams(testnet: boolean): {
-  network: Eth2Network;
-  dnpName: string;
-  containerName: string;
-} {
-  return {
-    network: testnet ? "prater" : "mainnet",
-    dnpName: testnet
-      ? eth2migrationParams.testnet.clientDnpName
-      : eth2migrationParams.mainnet.clientDnpName,
-    containerName: testnet
-      ? eth2migrationParams.testnet.validatorContainerName
-      : eth2migrationParams.mainnet.validatorContainerName
   };
 }
 
@@ -47,7 +29,7 @@ export function getMigrationParams(testnet: boolean): {
  * @param dnpName
  * @param containerName
  */
-export async function getPrysmValidatorContainer(
+export async function getEth2ClientValidatorContainer(
   dnpName: string,
   containerName: string
 ): Promise<PackageContainer> {
@@ -55,31 +37,89 @@ export async function getPrysmValidatorContainer(
     dnpName
   });
 
-  const prysmValidatorContainer = prysmPackage.containers.find(
+  const eth2ClientValidatorContainer = prysmPackage.containers.find(
     container => container.containerName === containerName
   );
-  if (!prysmValidatorContainer)
-    throw Error(`Prysm validator container not found in package ${dnpName}`);
+  if (!eth2ClientValidatorContainer)
+    throw Error(
+      `Eth2 client validator container not found in package ${dnpName}`
+    );
 
-  return prysmValidatorContainer;
+  return eth2ClientValidatorContainer;
 }
 
 /**
- * Returns the volume of the Prysm validator container
+ * Get dnpname, container and network of eth2 client validator
+ * @param client
+ * @param testnet
+ * @returns {dnpName, containerName, network}
+ *  Example:
+ * [ I ]
+ *    - network: "mainnet"
+ *    - dnpName: "prysm.dnp.dappnode.eth"
+ *    - containerName: "DAppNodePackage-validator.prysm.dnp.dappnode.eth"
+ * [ II ]
+ *    - network: "prater"
+ *    - dnpName: "prater.dnp.dappnode.eth"
+ *    - containerName: "DAppNodePackage-validator.prysm.dnp.dappnode.eth"
+ */
+export function getMigrationParams(
+  client: Eth2Client,
+  testnet: boolean
+): {
+  network: Eth2Network;
+  dnpName: string;
+  validatorContainerName: string;
+  signerDnpName: string;
+} {
+  /*   mainnet: {
+    signerDnpName: "web3signer.dnp.dappnode.eth",
+    clientDnpName: "prysm.dnp.dappnode.eth",
+    validatorContainerName: "DAppNodePackage-validator.prysm.dnp.dappnode.eth"
+  },
+  testnet: {
+    signerDnpName: "web3signer-prater.dnp.dappnode.eth",
+    clientDnpName: "prater.dnp.dappnode.eth",
+    validatorContainerName:
+      "DAppNodePackage-validator.prysm-prater.dnp.dappnode.eth"
+  } */
+  return {
+    network: testnet ? "prater" : "mainnet",
+    dnpName: testnet
+      ? client + "-prater" + eth2migrationParams.dappnodeDomain
+      : client + eth2migrationParams.dappnodeDomain,
+    validatorContainerName: testnet
+      ? eth2migrationParams.dappnodePackagePrefix +
+        "-validator." +
+        client +
+        "-prater" +
+        eth2migrationParams.dappnodeDomain
+      : eth2migrationParams.dappnodePackagePrefix +
+        "-validator." +
+        client +
+        eth2migrationParams.dappnodeDomain,
+    signerDnpName: testnet
+      ? "web3signer" + "-prater" + eth2migrationParams.dappnodeDomain
+      : "web3signer" + eth2migrationParams.dappnodeDomain
+  };
+}
+
+/**
+ * Returns the volume of the Eth2 client validator container
  * @param container
  */
-export async function getPrysmValidatorVolumes(
+export async function getEth2ClientValidatorVolumes(
   container: PackageContainer
 ): Promise<Dockerode.Volume> {
-  const prysmValidatorVolume = container.volumes.find(volume => {
+  const eth2ClientValidatorVolume = container.volumes.find(volume => {
     volume.container;
   });
 
-  if (!prysmValidatorVolume)
-    throw Error(`Prysm validator container has no volume`);
+  if (!eth2ClientValidatorVolume)
+    throw Error(`Eth2 client validator container has no volume`);
 
-  const volume = docker.getVolume(prysmValidatorVolume.host);
-  if (!volume) throw Error(`Prysm validator volume not found`);
+  const volume = docker.getVolume(eth2ClientValidatorVolume.host);
+  if (!volume) throw Error(`Eth2 client validator volume not found`);
 
   return volume;
 }
