@@ -14,27 +14,30 @@ import { extendError } from "../../../utils/extendError";
  */
 export async function exportValidator({
   network,
-  validatorContainerName,
+  currentValidatorContainerName,
   volume,
   signerDnpName
 }: {
   network: Eth2Network;
-  validatorContainerName: string;
+  currentValidatorContainerName: string;
   volume: Dockerode.Volume;
   signerDnpName: string;
 }): Promise<void> {
   try {
     // Check export requirements
     await checkExportRequirements({
-      validatorContainerName,
+      currentValidatorContainerName,
       volume,
       signerDnpName
     });
 
     // Export keys
-    await exportValidatorKeys({ network, validatorContainerName });
+    await exportValidatorKeys({ network, currentValidatorContainerName });
     // Export slashing protection
-    await exportSlashingProtectionData({ network, validatorContainerName });
+    await exportSlashingProtectionData({
+      network,
+      currentValidatorContainerName
+    });
 
     // Verify export
     await verifyExport(volume);

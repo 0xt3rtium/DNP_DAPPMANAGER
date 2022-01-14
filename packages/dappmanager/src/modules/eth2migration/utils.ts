@@ -9,15 +9,15 @@ import { Eth2Network, eth2migrationParams, Eth2Client } from "./params";
  * @param dnpName
  * @param containerName
  */
-export async function getValidatorContainerSpecs(
+export async function getCurrentValidatorContainerSpecs(
   dnpName: string,
   containerName: string
 ): Promise<{ container: PackageContainer; volume: Dockerode.Volume }> {
-  const container = await getEth2ClientValidatorContainer(
+  const container = await getCurrentEth2ClientValidatorContainer(
     dnpName,
     containerName
   );
-  const volume = await getEth2ClientValidatorVolumes(container);
+  const volume = await getCurrentEth2ClientValidatorVolumes(container);
   return {
     container,
     volume
@@ -25,19 +25,19 @@ export async function getValidatorContainerSpecs(
 }
 
 /**
- * Returns the prysm validator container
+ * Returns the eth2client validator container
  * @param dnpName
  * @param containerName
  */
-export async function getEth2ClientValidatorContainer(
+export async function getCurrentEth2ClientValidatorContainer(
   dnpName: string,
   containerName: string
 ): Promise<PackageContainer> {
-  const prysmPackage = await packageGet({
+  const eth2ClientPackage = await packageGet({
     dnpName
   });
 
-  const eth2ClientValidatorContainer = prysmPackage.containers.find(
+  const eth2ClientValidatorContainer = eth2ClientPackage.containers.find(
     container => container.containerName === containerName
   );
   if (!eth2ClientValidatorContainer)
@@ -68,39 +68,39 @@ export function getMigrationParams(
   testnet: boolean
 ): {
   network: Eth2Network;
-  dnpName: string;
-  validatorContainerName: string;
+  newEth2ClientDnpName: string;
+  currentEth2ClientDnpName: string;
+  currentValidatorContainerName: string;
   signerDnpName: string;
+  signerContainerName: string;
 } {
-  /*   mainnet: {
-    signerDnpName: "web3signer.dnp.dappnode.eth",
-    clientDnpName: "prysm.dnp.dappnode.eth",
-    validatorContainerName: "DAppNodePackage-validator.prysm.dnp.dappnode.eth"
-  },
-  testnet: {
-    signerDnpName: "web3signer-prater.dnp.dappnode.eth",
-    clientDnpName: "prater.dnp.dappnode.eth",
-    validatorContainerName:
-      "DAppNodePackage-validator.prysm-prater.dnp.dappnode.eth"
-  } */
   return {
     network: testnet ? "prater" : "mainnet",
-    dnpName: testnet
+    newEth2ClientDnpName: testnet
       ? client + "-prater" + eth2migrationParams.dappnodeDomain
       : client + eth2migrationParams.dappnodeDomain,
-    validatorContainerName: testnet
+    currentEth2ClientDnpName: testnet
+      ? "prysm" + "-prater" + eth2migrationParams.dappnodeDomain
+      : "prysm" + eth2migrationParams.dappnodeDomain,
+    currentValidatorContainerName: testnet
       ? eth2migrationParams.dappnodePackagePrefix +
-        "-validator." +
-        client +
+        "-validator.prysm" +
         "-prater" +
         eth2migrationParams.dappnodeDomain
       : eth2migrationParams.dappnodePackagePrefix +
-        "-validator." +
-        client +
+        "-validator.prysm" +
         eth2migrationParams.dappnodeDomain,
     signerDnpName: testnet
       ? "web3signer" + "-prater" + eth2migrationParams.dappnodeDomain
-      : "web3signer" + eth2migrationParams.dappnodeDomain
+      : "web3signer" + eth2migrationParams.dappnodeDomain,
+    signerContainerName: testnet
+      ? eth2migrationParams.dappnodePackagePrefix +
+        "web3signer" +
+        "-prater" +
+        eth2migrationParams.dappnodeDomain
+      : eth2migrationParams.dappnodePackagePrefix +
+        "web3signer" +
+        eth2migrationParams.dappnodeDomain
   };
 }
 
@@ -108,7 +108,7 @@ export function getMigrationParams(
  * Returns the volume of the Eth2 client validator container
  * @param container
  */
-export async function getEth2ClientValidatorVolumes(
+export async function getCurrentEth2ClientValidatorVolumes(
   container: PackageContainer
 ): Promise<Dockerode.Volume> {
   const eth2ClientValidatorVolume = container.volumes.find(volume => {

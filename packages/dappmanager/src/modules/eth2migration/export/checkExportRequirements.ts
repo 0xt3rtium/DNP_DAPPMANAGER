@@ -6,15 +6,18 @@ import { packageGet, packageInstall } from "../../../calls";
 import { logs } from "../../../logs";
 
 /**
- * Check export requirements: paths and walletpassword.txt
+ * Check export requirements:
+ * - volume exists in host
+ * - validator container has walletPassword and walletDir
+ * - web3signer is installed, install it if necessary
  * @param validatorContainerName
  */
 export async function checkExportRequirements({
-  validatorContainerName,
+  currentValidatorContainerName,
   volume,
   signerDnpName
 }: {
-  validatorContainerName: string;
+  currentValidatorContainerName: string;
   volume: Dockerode.Volume;
   signerDnpName: string;
 }): Promise<void> {
@@ -24,7 +27,7 @@ export async function checkExportRequirements({
 
     // Validator container has walletdir and walletpassword file
     await shell(
-      `docker exec ${validatorContainerName} ls ${eth2migrationParams.keys.walletPasswordFile}`
+      `docker exec ${currentValidatorContainerName} ls ${eth2migrationParams.keys.walletPasswordFile}`
     ).catch(e => {
       throw extendError(e, "walletdir or/and walletpassword file not found");
     });

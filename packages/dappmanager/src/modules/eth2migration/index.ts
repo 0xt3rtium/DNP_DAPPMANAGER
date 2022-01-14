@@ -1,52 +1,61 @@
 import { exportValidator } from "./export";
 import { importValidator } from "./import";
 import { packageStartStop, packageRemove, volumeRemove } from "../../calls";
-import { getValidatorContainerSpecs, getMigrationParams } from "./utils";
+import { getCurrentValidatorContainerSpecs, getMigrationParams } from "./utils";
 import { Eth2Client } from "./params";
 import { extendError } from "../../utils/extendError";
 import { eth2MigrationRollback } from "./rollback";
 
 export async function eth2Migrate({
-  client,
+  client = "prysm",
   testnet
 }: {
   client: Eth2Client;
   testnet: boolean;
 }): Promise<void> {
   // Get params deppending on the network
-  const { network, dnpName, validatorContainerName, signerDnpName } =
-    getMigrationParams(client, testnet);
+  const {
+    network,
+    newEth2ClientDnpName,
+    currentEth2ClientDnpName,
+    currentValidatorContainerName,
+    signerDnpName,
+    signerContainerName
+  } = getMigrationParams(client, testnet);
 
   try {
     // Get container and volume of validator
-    const { container, volume } = await getValidatorContainerSpecs(
-      dnpName,
-      validatorContainerName
+    const { container, volume } = await getCurrentValidatorContainerSpecs(
+      currentEth2ClientDnpName,
+      currentValidatorContainerName
     );
 
     // 1. Backup keystores and slashing protection in docker volume
     await exportValidator({
       network,
-      validatorContainerName,
+      currentValidatorContainerName,
       volume,
       signerDnpName
     });
     // 2. Stop and remove validator container (no its volumes)
-    if (container.running) packageStartStop({ dnpName });
-    await packageRemove({ dnpName, deleteVolumes: false });
-    // 3. Install eth2 client web3signer version
-    // TODO: install Prysm-web3signer version with beaconchain volume attached
+    if (container.running)
+      packageStartStop({ dnpName: currentEth2ClientDnpName });
+    await packageRemove({
+      dnpName: currentEth2ClientDnpName,
+      deleteVolumes: false
+    });
 
     try {
       // 3. Import validator: keystores and slashing protection from docker volume to web3signer
       await importValidator({
-        validatorContainerName,
+        newEth2ClientDnpName,
         signerDnpName,
+        signerContainerName,
         volume: volume.name
       });
 
       // 4. Delete validator docker volume
-      // TODO: determine if slashin_protection is needed for Prysm-web3signer version
+      // TODO: determine if slashing_protection is needed for Prysm-web3signer version
       await volumeRemove({ name: volume.name });
     } catch (e) {
       // Rollback: install Prysm again with docker volume
