@@ -2,11 +2,13 @@ import "mocha";
 import { expect } from "chai";
 import shell from "../../../src/utils/shell";
 import { shellSafe } from "../../testUtils";
+import { eth2Migrate } from "../../../src/modules/eth2migration";
+import params from "../../../src/params";
 
 describe.only("eth2migrations", function () {
   const prysmComposePath = `${__dirname}/DAppNodePackage-prysm-prater/docker-compose.yml`;
-  const web3signerComposePath = `${__dirname}/DAppNodePackage-prysm-prater/docker-compose.yml`;
-  const tekuComposePath = `${__dirname}/DAppNodePackage-prysm-prater/docker-compose.yml`;
+  const web3signerComposePath = `${__dirname}/DAppNodePackage-teku-prater/docker-compose.yml`;
+  const tekuComposePath = `${__dirname}/DAppNodePackage-web3signer-prater/docker-compose.yml`;
 
   before(async () => {
     // Create necessary network
@@ -14,10 +16,28 @@ describe.only("eth2migrations", function () {
   });
 
   /**
+   * Run dappmanager container necessary for the migration
+   */
+  before(async () => {
+    await shell(
+      `docker run --network=dncore_network -d --name=${params.dappmanagerDnpName} alpine`
+    );
+  });
+
+  /**
+   * Get docker images needed
+   */
+  before(async () => {
+    /*     await shell(`docker pull consensys/teku:22.1.0`);
+    await shell(`docker pull consensys/web3signer:21.10.5`);
+    await shell(`docker pull postgres:14.1-bullseye`);
+    await shell(`docker pull alpine`); */
+  });
+
+  /**
    * Set-up web3signer
    */
   before(async () => {
-    // Setup validator container: run DAppNodePackage-prysm-prater
     await shell(`docker-compose -f ${web3signerComposePath} up -d`);
   });
 
@@ -25,7 +45,6 @@ describe.only("eth2migrations", function () {
    * Set-up eth2client
    */
   before(async () => {
-    // Setup validator container: run DAppNodePackage-prysm-prater
     await shell(`docker-compose -f ${tekuComposePath} up -d`);
   });
 
@@ -52,6 +71,10 @@ describe.only("eth2migrations", function () {
 
   it("should migrate validator", async () => {
     // Run migration: https://docs.prylabs.network/docs/install/install-with-docker/#step-4-run-migration
+    await eth2Migrate({
+      client: "teku",
+      network: "prater"
+    });
   });
 
   /**
@@ -61,13 +84,13 @@ describe.only("eth2migrations", function () {
     await shell(`docker-compose -f ${prysmComposePath} down -v`);
     await shell(`docker-compose -f ${web3signerComposePath} down -v`);
     await shell(`docker-compose -f ${tekuComposePath} down -v`);
+    await shell(`docker rm ${params.dappmanagerDnpName}`);
   });
 
   /**
    * Remove dncore_network
    */
   after(async () => {
-    // Remove validator container
     await shell(`docker network rm dncore_network`);
   });
 });

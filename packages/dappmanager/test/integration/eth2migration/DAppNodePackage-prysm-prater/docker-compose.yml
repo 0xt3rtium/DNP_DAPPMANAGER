@@ -34,4 +34,5 @@ services:
       EXTRA_OPTS: ""
 volumes:
   beacon-chain-data: {}
-  validator-data: {}
+  # EXTRA FOR INT TEST: give the volume the standar name given in a dappnode environment
+  validator-data: { name: prysm-praterdnpdappnodeeth_validator-data }
