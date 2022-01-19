@@ -83,7 +83,7 @@ export async function eth2Migrate({
     // Import validator: keystores and slashing protection from docker volume to web3signer
     const exportedData = readExportedKeystoresAndSlashingProtection();
     await importKeystoresAndSlashingProtectionViaApi({
-      signerDnpName,
+      signerContainerName,
       ...exportedData
     });
   } catch (e) {

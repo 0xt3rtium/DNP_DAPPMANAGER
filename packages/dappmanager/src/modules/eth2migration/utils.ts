@@ -152,12 +152,12 @@ function getEth2Web3Signer(network: Eth2Network): {
     case "mainnet":
       return {
         dnpName: "web3signer.dnp.dappnode.eth",
-        signerContainerName: `${params.CONTAINER_NAME_PREFIX}-signer.web3signer.dnp.dappnode.eth`
+        signerContainerName: `${params.CONTAINER_NAME_PREFIX}-web3signer.web3signer.dnp.dappnode.eth`
       };
     case "prater":
       return {
         dnpName: "web3signer-prater.dnp.dappnode.eth",
-        signerContainerName: `${params.CONTAINER_NAME_PREFIX}-signer.web3signer-prater.dnp.dappnode.eth`
+        signerContainerName: `${params.CONTAINER_NAME_PREFIX}-web3signer.web3signer-prater.dnp.dappnode.eth`
       };
     default:
       throw Error(`Network ${network} not supported`);
