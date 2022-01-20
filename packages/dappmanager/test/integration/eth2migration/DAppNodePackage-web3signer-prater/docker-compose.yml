@@ -38,6 +38,10 @@ services:
       - "postgres_data:/var/lib/postgresql/data"
       - "postgres_migrations:/docker-entrypoint-initdb.d"
     restart: unless-stopped
+networks:
+  default:
+    external: true
+    name: dncore_network
 volumes:
   web3signer_keyfiles: {}
   web3signer_keyfiles_tmp: {}
