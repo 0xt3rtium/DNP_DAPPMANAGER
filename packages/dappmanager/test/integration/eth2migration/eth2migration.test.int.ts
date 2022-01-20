@@ -18,9 +18,9 @@ describe.only("eth2migrations", function () {
   /**
    * Create dappmanager volume
    */
-  /*   before(() => {
+  before(() => {
     fs.mkdirSync(dappmanagerOutPaths.outVolumeTarget, { recursive: true });
-  }); */
+  });
 
   before(async () => {
     // Create necessary network
@@ -44,6 +44,11 @@ describe.only("eth2migrations", function () {
     await shell(`docker-compose -f ${prysmComposePath} up -d`);
     await shell(`docker-compose -f ${tekuComposePath} up -d`);
     await shell(`docker-compose -f ${web3signerComposePath} up -d`);
+    // create manualy docker volume: docker volume create.... with the needed driver settings
+    await shell(`docker volume create -d local --name=${outputVolumeName}\
+    --opt device="${dappmanagerOutPaths.outVolumeTarget}" \
+    --opt type="none" \
+    --opt o="bind"`);
     await shell(
       `docker run --network=dncore_network -d --name=${params.dappmanagerDnpName} \
 --volume=${outputVolumeName}:${dappmanagerOutPaths.outVolumeTarget} alpine`
@@ -77,6 +82,6 @@ describe.only("eth2migrations", function () {
    * Remove dncore_network
    */
   after(async () => {
-    await shell(`docker network rm dncore_network`);
+    await shellSafe(`docker network rm dncore_network`);
   });
 });

@@ -40,26 +40,11 @@ export async function exportKeystoresAndSlashingProtection({
     rootDir: "/root",
     outVolumeTarget: "/out",
     outDir: "/out/prysm-migration",
+    relativeOutDir: "prysm-migration",
     walletDir: prysmPathWalletDir,
     walletpasswordFilepath: path.join(prysmPathWalletDir, "walletpassword.txt"),
     walletpasswordOutFilepath: "/out/prysm-migration/walletpassword.txt"
   };
-
-  logs.info("[eth2migration-export] copy walletpassword to backup folder");
-
-  // Copy walletpassowrd to backup folder
-  await shell(
-    [
-      "docker run",
-      "--rm",
-      `--name ${prysmMigrationContainerName}`,
-      `--volume ${prysmOldValidatorVolumeName}:${prysmPaths.rootDir}`,
-      `--volume ${outputVolumeName}:${prysmPaths.outDir}`,
-      alpineImage,
-      `cp ${prysmPaths.walletpasswordFilepath} ${prysmPaths.walletpasswordOutFilepath}`
-    ],
-    { errorMessage: "walletpassword.txt copy failed" }
-  );
 
   logs.info("[eth2migration-export] get validator accounts");
 
@@ -91,24 +76,41 @@ export async function exportKeystoresAndSlashingProtection({
 
   logs.info(`[eth2migration-export] validator pubkeys: ${validatorPubkeysHex}`);
 
-  logs.info("Give proper 0700 permissions to /out/prysm-migration");
-
-  // The path where the keys will be exported requires 0700 permissions
-  await shell([
-    "docker run",
-    "--rm",
-    `--name ${prysmMigrationContainerName}`,
-    `--volume ${outputVolumeName}:${prysmPaths.outDir}`,
-    alpineImage,
-    "chmod -R 0700 /out/prysm-migration"
-  ]);
-
   logs.info("[eth2migration-export] exporting keystores");
 
   // Export keys to a .zip file
   // Writes to a file named 'backup.zip' in `--backup-dir`
   //
   // $ Example command: validator accounts backup --wallet-dir=/root/.eth2validators --wallet-password-file=/root/.eth2validators/walletpassword.txt --backup-dir=/root --backup-password-file=/root/.eth2validators/walletpassword.txt --backup-public-keys=0x80b11b83eb8c1858c657dc55936bd4b47d2418c8906777cecae9c14495796f3d52b44652684e25e9ebb3e9efcfea33c6,0x8ac669f5180ae1de36db123114657437fd2cd3f51e838aa327d6739ff28907731462e0832fb9eb190972cfd652b2a775 --prater
+  try {
+    await shell(
+      [
+        "docker run",
+        "--rm",
+        `--name ${prysmMigrationContainerName}`,
+        `--volume ${prysmOldValidatorVolumeName}:${prysmPaths.rootDir}`,
+        `--volume ${outputVolumeName}:${prysmPaths.outVolumeTarget}`,
+        "--entrypoint=/usr/local/bin/validator",
+        prysmOldValidatorImage,
+        "accounts backup",
+        `--wallet-dir=${prysmPaths.walletDir}`,
+        `--wallet-password-file=${prysmPaths.walletpasswordFilepath}`,
+        `--backup-dir=${prysmPaths.outDir}`,
+        `--backup-password-file=${prysmPaths.walletpasswordFilepath}`,
+        `--backup-public-keys=${validatorPubkeysHex.join(",")}`,
+        `--${network}`,
+        "--accept-terms-of-use"
+      ],
+      { errorMessage: "validator accounts backup failed" }
+    );
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
+
+  logs.info("[eth2migration-export] copy walletpassword to backup folder");
+
+  // Copy walletpassowrd to backup folder
   await shell(
     [
       "docker run",
@@ -116,18 +118,10 @@ export async function exportKeystoresAndSlashingProtection({
       `--name ${prysmMigrationContainerName}`,
       `--volume ${prysmOldValidatorVolumeName}:${prysmPaths.rootDir}`,
       `--volume ${outputVolumeName}:${prysmPaths.outDir}`,
-      "--entrypoint=/usr/local/bin/validator",
-      prysmOldValidatorImage,
-      "accounts backup",
-      `--wallet-dir=${prysmPaths.walletDir}`,
-      `--wallet-password-file=${prysmPaths.walletpasswordFilepath}`,
-      `--backup-dir=${prysmPaths.outDir}`,
-      `--backup-password-file=${prysmPaths.walletpasswordFilepath}`,
-      `--backup-public-keys=${validatorPubkeysHex.join(",")}`,
-      `--${network}`,
-      "--accept-terms-of-use"
+      alpineImage,
+      `cp ${prysmPaths.walletpasswordFilepath} ${prysmPaths.walletpasswordOutFilepath}`
     ],
-    { errorMessage: "validator accounts backup failed" }
+    { errorMessage: "walletpassword.txt copy failed" }
   );
 
   logs.info("[eth2migration-export] exporting slashing protection");
@@ -154,27 +148,13 @@ export async function exportKeystoresAndSlashingProtection({
     { errorMessage: "Eth2 migration: exportSlashingProtectionData failed" }
   );
 
+  logs.info("[eth2migration-export] getting files");
+  const files = await shell(`ls -la ${dappmanagerOutPaths.outVolumeTarget}`);
+  logs.info("files: ", files);
+
   logs.info("[eth2migration-export] checking exported files");
 
-  // Verify content is in host volume:
-  // - backup.zip and the unziped content (keystore_x.json)
-  // - slashing_protection.json
-  // - walletpassword.txt
-  if (!fs.existsSync(dappmanagerOutPaths.backupOutFilepath)) {
-    throw Error(
-      `backup.zip file not found in ${dappmanagerOutPaths.backupOutFilepath}`
-    );
-  }
-  if (!fs.existsSync(dappmanagerOutPaths.walletpasswordOutFilepath)) {
-    throw Error(
-      `walletpassword.txt file not found in ${dappmanagerOutPaths.walletpasswordOutFilepath}`
-    );
-  }
-  if (!fs.existsSync(dappmanagerOutPaths.slashingProtectionOutFilepath)) {
-    throw Error(
-      `slashing_protection.json file not found in ${dappmanagerOutPaths.slashingProtectionOutFilepath}`
-    );
-  }
+  ensureContentIsInHostVolume();
 
   logs.info("[eth2migration-export] extracting keystores backup zip");
 
@@ -190,6 +170,35 @@ export async function exportKeystoresAndSlashingProtection({
 }
 
 // Utils
+
+/**
+ * Verify content is in host volume:
+ *  - backup.zip and the unziped content (keystore_x.json)
+ *  - slashing_protection.json
+ *  - walletpassword.txt
+ */
+function ensureContentIsInHostVolume(): void {
+  try {
+    if (!fs.existsSync(dappmanagerOutPaths.walletpasswordOutFilepath)) {
+      throw Error(
+        `walletpassword.txt file not found in ${dappmanagerOutPaths.walletpasswordOutFilepath}`
+      );
+    }
+    if (!fs.existsSync(dappmanagerOutPaths.slashingProtectionOutFilepath)) {
+      throw Error(
+        `slashing_protection.json file not found in ${dappmanagerOutPaths.slashingProtectionOutFilepath}`
+      );
+    }
+    if (!fs.existsSync(dappmanagerOutPaths.backupOutFilepath)) {
+      throw Error(
+        `backup.zip file not found in ${dappmanagerOutPaths.backupOutFilepath}`
+      );
+    }
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
+}
 
 /**
  * Return a string with the public keys comma separated
