@@ -20,8 +20,8 @@ const imagesToPull = [
 
 describe.only("eth2migrations", function () {
   const prysmComposePath = `${__dirname}/DAppNodePackage-prysm-prater/docker-compose.yml`;
-  const web3signerComposePath = `${__dirname}/DAppNodePackage-teku-prater/docker-compose.yml`;
-  const tekuComposePath = `${__dirname}/DAppNodePackage-web3signer-prater/docker-compose.yml`;
+  const tekuComposePath = `${__dirname}/DAppNodePackage-teku-prater/docker-compose.yml`;
+  const web3signerComposePath = `${__dirname}/DAppNodePackage-web3signer-prater/docker-compose.yml`;
 
   before("Create dappmanager volume target", () => {
     if (dappmanagerOutPaths.outVolumeTarget.startsWith("/usr/src/app")) {
@@ -77,7 +77,8 @@ describe.only("eth2migrations", function () {
     }
   );
 
-  it("should migrate validator", async () => {
+  it("should migrate validator", async function () {
+    this.timeout(240 * 1000);
     // Run migration: https://docs.prylabs.network/docs/install/install-with-docker/#step-4-run-migration
     await eth2Migrate({
       client: "teku",

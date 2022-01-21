@@ -11,7 +11,7 @@ import { rollbackToPrysmOld } from "./rollback/rollbackToPrysmOld";
 // Other
 import { extendError } from "../../utils/extendError";
 import shell from "../../utils/shell";
-import { dockerVolumeRemove } from "../docker";
+import { dockerContainerStart, dockerVolumeRemove } from "../docker";
 // Params
 import params from "../../params";
 import { Eth2Client, Eth2Network } from "./params";
@@ -107,10 +107,12 @@ export async function eth2Migrate({
       alpineImage
     });
 
-    logs.info("importing keystores and slashing protection data");
-
     // Import validator: keystores and slashing protection from docker volume to web3signer
     const exportedData = readExportedKeystoresAndSlashingProtection();
+    logs.info("exportedData: ", exportedData);
+    logs.info("Starting web3signer");
+    await dockerContainerStart(signerContainerName);
+    logs.info("importing keystores and slashing protection data");
     await importKeystoresAndSlashingProtectionViaApi({
       signerContainerName,
       ...exportedData
