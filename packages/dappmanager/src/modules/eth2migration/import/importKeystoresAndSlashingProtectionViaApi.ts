@@ -10,7 +10,7 @@ import { Web3Signer } from "../web3signer";
  *  - validator_keystore_x.json
  *  - walletpassword.txt
  *  - slashing_protection.json
- * - IMPORTANT: web3signer API has a race condition that requires a few minutes for the API to be fully functional, otherwise it will throw a connection refused error
+ * - IMPORTANT: web3signer API has a race condition that requires some time for the API to be fully functional, otherwise it will throw a connection refused error
  */
 export async function importKeystoresAndSlashingProtectionViaApi({
   signerContainerName,
@@ -32,7 +32,7 @@ export async function importKeystoresAndSlashingProtectionViaApi({
 
     // web3signer upcheck
     const statusResponse = await web3signer.upcheck();
-    logs.info("web3signer status check: ", statusResponse);
+    logs.debug("web3signer status check: ", statusResponse);
     if (statusResponse.toUpperCase().trim() !== "OK")
       throw Error("web3signer is not up");
 
@@ -42,9 +42,9 @@ export async function importKeystoresAndSlashingProtectionViaApi({
       passwords: keystoresStr.map(() => keystorePasswordStr),
       slashing_protection: slashingProtectionStr
     });
-    logs.info(importResponse);
+    logs.debug(importResponse);
     if (allKeystoresSuccess(importResponse))
-      logs.info("successfully imported validators: ", importResponse.data);
+      logs.debug("successfully imported validators: ", importResponse.data);
     else {
       // TODO: retry on error for unsuccess imported keystores
       logs.error("failed to import validators: ", importResponse.data);
@@ -53,14 +53,14 @@ export async function importKeystoresAndSlashingProtectionViaApi({
 
     // web3signer verify import with list keystores
     const listResponse = await web3signer.listKeystores();
-    // TODO: verify each pubkey
+    logs.debug(listResponse);
     const pubKeys = listResponse.data.map(
       keystore => keystore.validating_pubkey
     );
-    if (pubKeys.length === 0) {
+    if (pubKeys.length === 0 || pubKeys.length !== keystoresStr.length)
       throw new Error("No validator public keys found");
-    }
-    logs.info(
+
+    logs.debug(
       "Eth2 migration: verifyImport succesful for public keys: ",
       pubKeys
     );

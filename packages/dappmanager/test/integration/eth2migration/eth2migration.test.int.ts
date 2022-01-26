@@ -1,5 +1,4 @@
 import "mocha";
-import { expect } from "chai";
 import fs from "fs";
 import shell from "../../../src/utils/shell";
 import { shellSafe } from "../../testUtils";
@@ -18,7 +17,7 @@ const imagesToPull = [
   "alpine:latest"
 ];
 
-describe.only("eth2migrations", function () {
+describe("eth2migrations", function () {
   const prysmComposePath = `${__dirname}/DAppNodePackage-prysm-prater/docker-compose.yml`;
   const tekuComposePath = `${__dirname}/DAppNodePackage-teku-prater/docker-compose.yml`;
   const web3signerComposePath = `${__dirname}/DAppNodePackage-web3signer-prater/docker-compose.yml`;

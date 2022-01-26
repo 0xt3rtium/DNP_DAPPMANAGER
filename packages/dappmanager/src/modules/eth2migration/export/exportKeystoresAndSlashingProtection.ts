@@ -42,7 +42,6 @@ export async function exportKeystoresAndSlashingProtection({
     outVolumeTarget: "/out",
     outDir: "/out",
     walletDir: prysmPathWalletDir,
-
     /**
      * Outputs file at /out/backup/backup.zip
      * MUST be a new path for Prysm to give it a set permissions different than docker's directories
@@ -54,10 +53,11 @@ export async function exportKeystoresAndSlashingProtection({
     slashingProtectionOutDir: "/out"
   };
 
-  logs.info("Listing validator accounts");
+  logs.debug("Listing validator accounts");
 
   // List keys
   // - Example command: validator accounts list --wallet-dir=/root/.eth2validators --wallet-password-file=/root/.eth2validators/walletpassword.txt --prater
+  // TODO: deep test this command, check if might be pagination. ask for an --all flag in github issue
   const validatorAccountsData = await shell(
     [
       "docker run",
@@ -80,7 +80,7 @@ export async function exportKeystoresAndSlashingProtection({
     validatorAccountsData
   );
 
-  logs.info(
+  logs.debug(
     `Exporting keystores to ${prysmPaths.outDir} pubkeys: ${validatorPubkeysHex}`
   );
 
@@ -109,7 +109,7 @@ export async function exportKeystoresAndSlashingProtection({
     { errorMessage: "validator accounts backup failed" }
   );
 
-  logs.info("Copying walletpassword to backup folder");
+  logs.debug("Copying walletpassword to backup folder");
 
   // Copy walletpassowrd to backup folder
   await shell(
@@ -125,7 +125,7 @@ export async function exportKeystoresAndSlashingProtection({
     { errorMessage: "walletpassword.txt copy failed" }
   );
 
-  logs.info("Exporting slashing protection data");
+  logs.debug("Exporting slashing protection data");
 
   // Export slashing-protection to interchange JSON file
   // Writes to a file named 'slashing_protection.json' in `--datadir`
@@ -150,7 +150,7 @@ export async function exportKeystoresAndSlashingProtection({
   );
 
   if (os.userInfo().username !== "root") {
-    logs.info("Changing backup dir permissions to allow reading by non-root");
+    logs.debug("Changing backup dir permissions to allow reading by non-root");
     // The backup directory created by the Prysm container can only be read by its owner.
     // In local integration tests that's the root user
     // drwx------ 2 root root 4096 ene 20 19:35 backup
@@ -167,10 +167,10 @@ export async function exportKeystoresAndSlashingProtection({
       { errorMessage: "change of outDir permissions failed" }
     );
   } else {
-    logs.info("Skipping changing backup dir permissions, user is root");
+    logs.debug("Skipping changing backup dir permissions, user is root");
   }
 
-  logs.info("Checking exported files");
+  logs.debug("Checking exported files");
 
   // Verify content is in host volume:
   //  - backup.zip and the unziped content (keystore_x.json)
@@ -192,7 +192,7 @@ Files in dir: ${filesInDir ? filesInDir.join(" ") : "dir does not exist"}`);
     }
   }
 
-  logs.info("Extracting keystores backup zip");
+  logs.debug("Extracting keystores backup zip");
 
   // Extract zip
   await shell(

@@ -17,7 +17,11 @@ import params from "../../params";
 import { Eth2Client, Eth2Network } from "./params";
 // Utils
 import getDappmanagerImage from "../../utils/getDappmanagerImage";
-import { getMigrationParams, getPrysmOldValidatorImage } from "./utils";
+import {
+  getMigrationParams,
+  getPrysmOldValidatorImage,
+  moveWalletDirOldPrysmVolume
+} from "./utils";
 import { logs } from "../../logs";
 
 export async function eth2Migrate({
@@ -27,15 +31,13 @@ export async function eth2Migrate({
   client: Eth2Client;
   network: Eth2Network;
 }): Promise<void> {
-  // TODO: determine the prysm-web3signer version
-  const prysmWeb3signerVersion = "2.0.0";
-
   logs.info("Starting migration");
 
-  logs.info("getting params");
+  logs.debug("getting params");
   // Get params deppending on the network
   const {
     newEth2ClientDnpName,
+    newEth2ClientVersion,
     prysmOldDnpName,
     prysmOldValidatorContainerName,
     prysmOldValidatorVolumeName,
@@ -44,7 +46,7 @@ export async function eth2Migrate({
     signerContainerName
   } = getMigrationParams(client, network);
 
-  logs.info("migration params: ", {
+  logs.debug("migration params: ", {
     newEth2ClientDnpName,
     prysmOldDnpName,
     prysmOldValidatorContainerName,
@@ -54,23 +56,23 @@ export async function eth2Migrate({
     signerContainerName
   });
 
-  logs.info("getting dappmanager image");
+  logs.debug("getting dappmanager image");
 
   // Get SOME image to run 'cp' or 'rm' commands on Prysm's volume
   const alpineImage = await getDappmanagerImage();
 
-  logs.info("alpine image: ", alpineImage);
+  logs.debug("alpine image: ", alpineImage);
 
-  logs.info("getting old prysm validator image");
+  logs.debug("getting old prysm validator image");
 
   const prysmOldValidatorImage = await getPrysmOldValidatorImage({
     prysmOldDnpName,
     prysmOldStableVersion
   });
 
-  logs.info("old prysm validator image: ", prysmOldValidatorImage);
+  logs.debug("old prysm validator image: ", prysmOldValidatorImage);
 
-  logs.info("ensuring requirements");
+  logs.debug("ensuring requirements");
 
   // Ensure requirements
   await ensureRequirements({
@@ -78,25 +80,21 @@ export async function eth2Migrate({
     signerContainerName,
     newEth2ClientDnpName,
     client,
-    prysmWeb3signerVersion,
+    newEth2ClientVersion,
     prysmOldValidatorContainerName
   });
 
   try {
-    logs.info("moving wallet dir in docker volume");
+    logs.debug("moving wallet dir in docker volume");
     // Move wallet dir to a new location different to what the container expects
-    await shell([
-      "docker run",
-      "--rm",
-      `--name ${params.CONTAINER_TOOL_NAME_PREFIX}prysm-migration`,
-      `--volume ${prysmOldValidatorVolumeName}:/root`,
+    await moveWalletDirOldPrysmVolume({
+      prysmOldValidatorVolumeName,
       alpineImage,
-      "mv /root/.eth2validators /root/.eth2validators.backup"
-    ]).catch(e => {
-      throw extendError(e, "Error moving Prysm's legacy wallet directory");
+      source: "/root/.eth2validators",
+      target: "/root/.eth2validators.backup"
     });
 
-    logs.info("export keystores and slashing protection");
+    logs.debug("export keystores and slashing protection");
 
     // Backup keystores and slashing protection in docker volume
     await exportKeystoresAndSlashingProtection({
@@ -109,10 +107,10 @@ export async function eth2Migrate({
 
     // Import validator: keystores and slashing protection from docker volume to web3signer
     const exportedData = readExportedKeystoresAndSlashingProtection();
-    logs.info("exportedData: ", exportedData);
-    logs.info("Starting web3signer");
+    logs.debug("exportedData: ", exportedData);
+    logs.debug("Starting web3signer");
     await dockerContainerStart(signerContainerName);
-    logs.info("importing keystores and slashing protection data");
+    logs.debug("importing keystores and slashing protection data");
     await importKeystoresAndSlashingProtectionViaApi({
       signerContainerName,
       ...exportedData
@@ -121,6 +119,13 @@ export async function eth2Migrate({
     logs.error("error exporting, cleaning and rolling back", e);
 
     cleanExportedKeystoresAndSlashingProtection();
+    // Move wallet dir back to the original location
+    await moveWalletDirOldPrysmVolume({
+      prysmOldValidatorVolumeName,
+      alpineImage,
+      source: "/root/.eth2validators.backup",
+      target: "/root/.eth2validators"
+    });
     await rollbackToPrysmOld({
       signerDnpName,
       alpineImage,
@@ -132,13 +137,13 @@ export async function eth2Migrate({
     throw extendError(e, "Eth2 migration failed");
   }
 
-  logs.info("cleaning exported keystores and slashing protection");
+  logs.debug("cleaning exported keystores and slashing protection");
 
   // Clean up DAPPMANAGER temp files
   cleanExportedKeystoresAndSlashingProtection();
 
   if (client === "prysm") {
-    logs.info("removing backup from prysm docker volume");
+    logs.debug("removing backup from prysm docker volume");
     // If Prysm: Only delete keys, don't delete volume
     // MUST confirm that keys are alive in Web3Signer
     // - Delete keys from Prysm's legacy container
@@ -153,7 +158,7 @@ export async function eth2Migrate({
       throw extendError(e, "Error moving Prysm's legacy wallet directory");
     });
   } else {
-    logs.info("removing prysm old docker volume");
+    logs.debug("removing prysm old docker volume");
     // If NOT Prysm: Delete volume
     await dockerVolumeRemove(prysmOldValidatorVolumeName);
   }
