@@ -26,8 +26,8 @@ export async function importKeystoresAndSlashingProtectionViaApi({
   try {
     // Get web3signer instance
     const web3signerApiUrl = process.env.TEST
-      ? "http://localhost:9003"
-      : `http://${signerContainerName}:9003`;
+      ? "http://localhost:9000"
+      : `http://${signerContainerName}:9000`;
     const web3signer = new Web3Signer(web3signerApiUrl);
 
     // web3signer upcheck

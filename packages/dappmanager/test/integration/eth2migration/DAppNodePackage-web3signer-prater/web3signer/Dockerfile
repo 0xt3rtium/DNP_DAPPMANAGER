@@ -20,7 +20,7 @@ FROM consensys/web3signer:$UPSTREAM_VERSION
 # EXTRA FOR INT TEST: binary from source
 COPY --from=builder /usr/src/app/web3signer/web3signer-develop /opt/web3signer
 
-EXPOSE 9003
+EXPOSE 9000
 
 COPY entrypoint.sh /usr/bin/entrypoint.sh
 ENTRYPOINT /bin/bash /usr/bin/entrypoint.sh
