@@ -40,7 +40,7 @@ export default function AlertEth2migration({
       });
     });
 
-    await withToast(() => api.eth2migrate({ client, network }), {
+    await withToast(() => api.eth2Migrate({ client, network }), {
       message: `Eth2 migrating to ${client}`,
       onSuccess: `Eth2 migrated to ${client}`
     });

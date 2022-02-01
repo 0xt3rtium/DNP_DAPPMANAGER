@@ -221,7 +221,7 @@ export interface Routes {
    * Eth2migrate from prysm-non-web3signer version
    * to eth2client-web3signer-version
    */
-  eth2migrate: (kwargs: {
+  eth2Migrate: (kwargs: {
     client: Eth2Client;
     network: Eth2Network;
   }) => Promise<void>;
@@ -693,7 +693,7 @@ export const routesData: { [P in keyof Routes]: RouteData } = {
   dockerEngineUpdateCheck: {},
   ethClientFallbackSet: { log: true },
   ethClientTargetSet: { log: true },
-  eth2migrate: { log: true },
+  eth2Migrate: { log: true },
   fetchCoreUpdateData: {},
   fetchDirectory: {},
   fetchRegistry: {},
