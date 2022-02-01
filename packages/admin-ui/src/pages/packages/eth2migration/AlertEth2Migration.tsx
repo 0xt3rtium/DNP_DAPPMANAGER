@@ -33,7 +33,7 @@ export default function AlertEth2migration({
 
     await new Promise<void>(resolve => {
       confirm({
-        title: `Eth2 migration`,
+        title: `Eth2 migrate`,
         text: `You are about to perform a migration from validating with Prysm not using web3signer to validating with ${client} using web3signer in the network ${network}.`,
         label: "Migrate",
         onClick: resolve
@@ -76,7 +76,7 @@ export default function AlertEth2migration({
               migrate to web3signer{" "}
               <Dropdown>
                 <Dropdown.Toggle variant="dappnode" id="dropdown-basic">
-                  Eth2 migration
+                  Eth2 migrate
                 </Dropdown.Toggle>
 
                 <Dropdown.Menu>
@@ -97,7 +97,6 @@ export default function AlertEth2migration({
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
-              <Button variant="dappnode">Eth2 migration</Button>
             </Alert>
           ) : semver.lte(dnp.version, prysmLegacyStableVersion) ? (
             <AlertPackageUpdateAvailable
